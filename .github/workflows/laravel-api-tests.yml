@@ -24,7 +24,7 @@ jobs:
       - name: Download Laravel 11 skeleton without installing dependencies
         run: |
           set -euxo pipefail
-          composer create-project laravel/laravel /tmp/laravel-base '11.*' --no-install --no-interaction --prefer-dist --no-progress
+          composer create-project laravel/laravel /tmp/laravel-base '11.*' --no-install --no-scripts --no-interaction --prefer-dist --no-progress
       - name: Resolve Laravel dependencies
         working-directory: /tmp/laravel-base
         run: |
