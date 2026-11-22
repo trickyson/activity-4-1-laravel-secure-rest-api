@@ -1,0 +1,29 @@
+name: Laravel API automated tests
+on:
+  push:
+  workflow_dispatch:
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, pdo_sqlite, sqlite3, dom, xml
+          coverage: none
+      - name: Create Laravel 11 skeleton
+        run: |
+          composer create-project laravel/laravel /tmp/laravelapi "^11.0" --no-interaction --prefer-dist
+          cp -a /tmp/laravelapi/. /tmp/laravel-base/
+      - name: Install API routes and overlay
+        run: |
+          cd /tmp/laravel-base
+          php artisan install:api --no-interaction
+          cp -a "$GITHUB_WORKSPACE/app/." app/
+          cp "$GITHUB_WORKSPACE/routes/api.php" routes/api.php
+          cp "$GITHUB_WORKSPACE/tests/Feature/UserApiTest.php" tests/Feature/UserApiTest.php
+          cp .env.example .env
+          php artisan key:generate
+          php artisan config:clear
+          DB_CONNECTION=sqlite DB_DATABASE=:memory: php artisan test --filter=UserApiTest
