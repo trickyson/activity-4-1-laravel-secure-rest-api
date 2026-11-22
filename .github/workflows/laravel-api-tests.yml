@@ -1,4 +1,4 @@
-name: Laravel API automated tests
+name: Laravel 11 API automated tests
 on:
   push:
   workflow_dispatch:
@@ -8,22 +8,32 @@ jobs:
     steps:
       - name: Checkout project overlay
         uses: actions/checkout@v4
-      - name: Set up PHP
+      - name: Set up PHP with Laravel extensions
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.3'
-          extensions: mbstring, pdo_sqlite, sqlite3, dom, xml
+          php-version: '8.4'
+          extensions: mbstring, pdo_sqlite, sqlite3, dom, xml, curl, fileinfo, openssl, tokenizer, ctype, zip, bcmath, intl
+          tools: composer:v2
           coverage: none
-      - name: Build Laravel 11 application and run API tests
+      - name: Create Laravel 11 skeleton
         shell: bash
         run: |
           set -euo pipefail
-          composer create-project laravel/laravel /tmp/laravel-base "^11.0" --no-interaction --prefer-dist
+          composer create-project laravel/laravel /tmp/laravel-base "^11.0" --no-interaction --prefer-dist --no-progress
+      - name: Apply project source and register API routes
+        shell: bash
+        run: |
+          set -euo pipefail
           cd /tmp/laravel-base
-          php artisan install:api --no-interaction
           cp -a "$GITHUB_WORKSPACE/app/." app/
           cp "$GITHUB_WORKSPACE/routes/api.php" routes/api.php
           cp "$GITHUB_WORKSPACE/tests/Feature/UserApiTest.php" tests/Feature/UserApiTest.php
+          cp "$GITHUB_WORKSPACE/bootstrap/app.php" bootstrap/app.php
           cp .env.example .env
           php artisan key:generate
+      - name: Run API feature tests with SQLite
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/laravel-base
           DB_CONNECTION=sqlite DB_DATABASE=:memory: php artisan test --filter=UserApiTest
