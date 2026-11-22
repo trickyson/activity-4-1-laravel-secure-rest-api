@@ -1,4 +1,4 @@
-name: Laravel 11 API automated tests
+name: Laravel 11 API tests
 on:
   push:
   workflow_dispatch:
@@ -6,24 +6,33 @@ jobs:
   tests:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout project overlay
+      - name: Checkout
         uses: actions/checkout@v4
-      - name: Set up PHP with Laravel extensions
+      - name: Install PHP 8.3 and extensions
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.4'
-          extensions: mbstring, pdo_sqlite, sqlite3, dom, xml, curl, fileinfo, openssl, tokenizer, ctype, zip, bcmath, intl
+          php-version: '8.3'
+          extensions: mbstring, pdo_sqlite, sqlite3, dom, xml, curl, fileinfo, openssl, tokenizer, ctype, zip, bcmath, intl, sodium
           tools: composer:v2
           coverage: none
-      - name: Create Laravel 11 skeleton
-        shell: bash
+      - name: Show platform diagnostics
         run: |
-          set -euo pipefail
-          composer create-project laravel/laravel /tmp/laravel-base "^11.0" --no-interaction --prefer-dist --no-progress
-      - name: Apply project source and register API routes
-        shell: bash
+          php -v
+          composer --version
+          composer diagnose || true
+          php -m
+      - name: Download Laravel 11 skeleton without installing dependencies
         run: |
-          set -euo pipefail
+          set -euxo pipefail
+          composer create-project laravel/laravel /tmp/laravel-base '11.*' --no-install --no-interaction --prefer-dist --no-progress
+      - name: Resolve Laravel dependencies
+        working-directory: /tmp/laravel-base
+        run: |
+          set -euxo pipefail
+          composer update --with-all-dependencies --no-interaction --prefer-dist --no-progress -vv
+      - name: Copy project overlay
+        run: |
+          set -euxo pipefail
           cd /tmp/laravel-base
           cp -a "$GITHUB_WORKSPACE/app/." app/
           cp "$GITHUB_WORKSPACE/routes/api.php" routes/api.php
@@ -31,9 +40,12 @@ jobs:
           cp "$GITHUB_WORKSPACE/bootstrap/app.php" bootstrap/app.php
           cp .env.example .env
           php artisan key:generate
-      - name: Run API feature tests with SQLite
-        shell: bash
+      - name: Execute API feature tests
+        working-directory: /tmp/laravel-base
+        env:
+          DB_CONNECTION: sqlite
+          DB_DATABASE: ':memory:'
+          APP_ENV: testing
         run: |
-          set -euo pipefail
-          cd /tmp/laravel-base
-          DB_CONNECTION=sqlite DB_DATABASE=:memory: php artisan test --filter=UserApiTest
+          set -euxo pipefail
+          php artisan test --filter=UserApiTest
