@@ -6,31 +6,23 @@ jobs:
   tests:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout source files
         uses: actions/checkout@v4
-      - name: Install PHP 8.3 and extensions
+      - name: Set up PHP 8.3
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.3'
-          extensions: mbstring, pdo_sqlite, sqlite3, dom, xml, curl, fileinfo, openssl, tokenizer, ctype, zip, bcmath, intl, sodium
+          extensions: mbstring, pdo_sqlite, sqlite3, dom, xml, curl, fileinfo, openssl, tokenizer, ctype, zip, bcmath, intl
           tools: composer:v2
           coverage: none
-      - name: Show platform diagnostics
-        run: |
-          php -v
-          composer --version
-          composer diagnose || true
-          php -m
-      - name: Download Laravel 11 skeleton without installing dependencies
+      - name: Create Laravel 11 and install dependencies
+        shell: bash
         run: |
           set -euxo pipefail
-          composer create-project laravel/laravel /tmp/laravel-base '11.*' --no-install --no-scripts --no-interaction --prefer-dist --no-progress
-      - name: Resolve Laravel dependencies
-        working-directory: /tmp/laravel-base
-        run: |
-          set -euxo pipefail
-          composer update --with-all-dependencies --no-interaction --prefer-dist --no-progress -vv
-      - name: Copy project overlay
+          composer create-project laravel/laravel /tmp/laravel-base '^11.0' --no-scripts --no-interaction --prefer-dist --no-progress
+          test -f /tmp/laravel-base/vendor/autoload.php
+      - name: Copy API code and configure application
+        shell: bash
         run: |
           set -euxo pipefail
           cd /tmp/laravel-base
@@ -40,12 +32,14 @@ jobs:
           cp "$GITHUB_WORKSPACE/bootstrap/app.php" bootstrap/app.php
           cp .env.example .env
           php artisan key:generate
-      - name: Execute API feature tests
-        working-directory: /tmp/laravel-base
+          php artisan package:discover --ansi
+      - name: Run Laravel API tests
+        shell: bash
         env:
           DB_CONNECTION: sqlite
           DB_DATABASE: ':memory:'
           APP_ENV: testing
         run: |
           set -euxo pipefail
+          cd /tmp/laravel-base
           php artisan test --filter=UserApiTest
