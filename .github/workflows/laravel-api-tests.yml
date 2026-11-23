@@ -1,4 +1,4 @@
-name: Laravel 11 API tests
+name: Laravel secure API tests
 on:
   push:
   workflow_dispatch:
@@ -15,11 +15,11 @@ jobs:
           extensions: mbstring, pdo_sqlite, sqlite3, dom, xml, curl, fileinfo, openssl, tokenizer, ctype, zip, bcmath, intl
           tools: composer:v2
           coverage: none
-      - name: Create Laravel 11 and install dependencies
+      - name: Create supported Laravel 12 and install dependencies
         shell: bash
         run: |
           set -euxo pipefail
-          composer create-project laravel/laravel /tmp/laravel-base '^11.0' --no-scripts --no-interaction --prefer-dist --no-progress
+          composer create-project laravel/laravel /tmp/laravel-base '^12.0' --no-scripts --no-interaction --prefer-dist --no-progress
           test -f /tmp/laravel-base/vendor/autoload.php
       - name: Copy API code and configure application
         shell: bash
