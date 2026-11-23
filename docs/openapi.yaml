@@ -1,0 +1,112 @@
+openapi: 3.0.3
+info:
+  title: Activity 4.1 - Secure Users REST API
+  version: 1.0.0
+  description: Laravel users API with input validation, password hashing and IP-based rate limiting. The endpoints are public for classroom demonstration; no authentication is implemented.
+servers:
+  - url: http://127.0.0.1:8000
+paths:
+  /api/users:
+    get:
+      summary: List users
+      operationId: listUsers
+      responses:
+        '200':
+          description: Users retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserListResponse'
+        '429':
+          description: Rate limit exceeded
+    post:
+      summary: Create a user
+      operationId: createUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateUser'
+            example:
+              name: Sample Student
+              email: sample@example.test
+              password: SecurePass123!
+              password_confirmation: SecurePass123!
+      responses:
+        '201':
+          description: User created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '422':
+          description: Validation failed, including duplicate email
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  errors:
+                    type: object
+                    additionalProperties:
+                      type: array
+                      items:
+                        type: string
+        '429':
+          description: Rate limit exceeded
+components:
+  schemas:
+    User:
+      type: object
+      required: [id, name, email]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        created_at:
+          type: string
+          format: date-time
+          nullable: true
+    CreateUser:
+      type: object
+      required: [name, email, password, password_confirmation]
+      properties:
+        name:
+          type: string
+          maxLength: 100
+        email:
+          type: string
+          format: email
+          maxLength: 255
+        password:
+          type: string
+          format: password
+          minLength: 8
+          writeOnly: true
+        password_confirmation:
+          type: string
+          format: password
+          writeOnly: true
+    UserResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        data:
+          $ref: '#/components/schemas/User'
+    UserListResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/User'
